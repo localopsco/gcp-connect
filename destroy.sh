@@ -122,7 +122,14 @@ terraform destroy -input=false -auto-approve \
   -var "oidc_issuer_uri=${OIDC_ISSUER_URI}" \
   -var "oidc_audience=${OIDC_AUDIENCE}"
 
+echo "==> Notifying LocalOps that the connection was removed"
+curl -fsS -X POST "${API_BASE}/disconnect" \
+  -H "Content-Type: application/json" \
+  -d "{\"verification_token\":\"${LOCALOPS_VERIFICATION_TOKEN}\"}" \
+  >/dev/null \
+  || err "Resources were removed from your project but notifying LocalOps failed. Re-run this command, or disconnect the connection in the dashboard."
+
 echo
-echo "Done. The LocalOps federation resources have been removed from ${PROJECT_ID}."
-echo "You can now delete the connection in the LocalOps dashboard."
+echo "Done. The LocalOps federation resources have been removed from ${PROJECT_ID},"
+echo "and the connection now shows as disconnected in the LocalOps dashboard."
 echo "(The Terraform state bucket gs://${STATE_BUCKET} is left in place for any other connections.)"
