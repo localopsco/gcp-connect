@@ -110,7 +110,9 @@ STATE_BUCKET="${PROJECT_ID}-localops-tfstate"
 STATE_PREFIX="connections/${LOCALOPS_CONNECTION_ID}"
 
 echo "==> Initializing Terraform"
-terraform init -input=false \
+# -reconfigure points Terraform at this connection's backend without trying to
+# migrate state from a previously initialized connection in the same directory.
+terraform init -input=false -reconfigure \
   -backend-config="bucket=${STATE_BUCKET}" \
   -backend-config="prefix=${STATE_PREFIX}"
 
