@@ -124,6 +124,27 @@ terraform destroy -input=false -auto-approve \
   -var "oidc_issuer_uri=${OIDC_ISSUER_URI}" \
   -var "oidc_audience=${OIDC_AUDIENCE}"
 
+# Clean up the Terraform state. The bucket is shared across every connection in
+# this project (one prefix per connection), so delete only this connection's
+# prefix, then remove the bucket itself only if nothing else is left in it.
+# Best-effort: state cleanup failures must not block the disconnect below.
+echo "==> Removing this connection's Terraform state"
+if gcloud storage rm --recursive "gs://${STATE_BUCKET}/${STATE_PREFIX}" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  echo "    Removed gs://${STATE_BUCKET}/${STATE_PREFIX}"
+else
+  echo "    Nothing to remove at gs://${STATE_BUCKET}/${STATE_PREFIX}"
+fi
+
+if [[ -z "$(gcloud storage ls "gs://${STATE_BUCKET}" --project="$PROJECT_ID" 2>/dev/null || true)" ]]; then
+  if gcloud storage buckets delete "gs://${STATE_BUCKET}" --project="$PROJECT_ID" >/dev/null 2>&1; then
+    echo "    Removed now-empty state bucket gs://${STATE_BUCKET}"
+  else
+    echo "    State bucket gs://${STATE_BUCKET} is empty but could not be removed; delete it manually if desired."
+  fi
+else
+  echo "    State bucket gs://${STATE_BUCKET} kept (other connections still use it)."
+fi
+
 echo "==> Notifying Ops that the connection was removed"
 curl -fsS -X POST "${API_BASE}/disconnect" \
   -H "Content-Type: application/json" \
@@ -134,4 +155,3 @@ curl -fsS -X POST "${API_BASE}/disconnect" \
 echo
 echo "Done. The Ops federation resources have been removed from ${PROJECT_ID},"
 echo "and the connection now shows as disconnected in the Ops dashboard."
-echo "(The Terraform state bucket gs://${STATE_BUCKET} is left in place for any other connections.)"
