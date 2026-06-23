@@ -29,6 +29,37 @@ require_env() {
   fi
 }
 
+# ensure_terraform guarantees a working `terraform` is on PATH. Some environments
+# (e.g. Cloud Shell) don't ship Terraform and print install instructions instead
+# of running it, so a successful `terraform version` is the real test — not
+# `command -v`. When it's missing, install it from the HashiCorp apt repository.
+ensure_terraform() {
+  if terraform version 2>/dev/null | grep -q '^Terraform v'; then
+    return
+  fi
+
+  if ! command -v apt-get >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1; then
+    err "Terraform is not installed and can't be installed automatically here. Install it (https://developer.hashicorp.com/terraform/install) and run this command again."
+  fi
+
+  local codename
+  codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+  [[ -n "$codename" ]] || codename="$(lsb_release -cs 2>/dev/null || true)"
+  [[ -n "$codename" ]] || err "Could not determine the OS codename to install Terraform. Install it manually (https://developer.hashicorp.com/terraform/install) and re-run."
+
+  echo "==> Terraform not found; installing it from the HashiCorp apt repository"
+  curl -fsSL https://apt.releases.hashicorp.com/gpg \
+    | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com ${codename} main" \
+    | sudo tee /etc/apt/sources.list.d/hashicorp.list >/dev/null
+  sudo apt-get update -qq
+  sudo apt-get install -y terraform
+
+  hash -r
+  terraform version 2>/dev/null | grep -q '^Terraform v' \
+    || err "Installed Terraform but the 'terraform' command still isn't working. Start a fresh shell ('exec bash') and re-run this command."
+}
+
 # pick_project shows an arrow-key menu over the given project IDs and stores the
 # chosen one in PROJECT_REF. Navigate with ↑/↓, select with Enter.
 pick_project() {
@@ -64,9 +95,11 @@ require_env OPS_API_URL
 require_env OPS_CONNECTION_ID
 require_env OPS_VERIFICATION_TOKEN
 
-for cmd in terraform gcloud jq curl; do
+for cmd in gcloud jq curl; do
   command -v "$cmd" >/dev/null 2>&1 || err "'$cmd' is required but was not found."
 done
+
+ensure_terraform
 
 # Resolve the project to disconnect. The active value may be a project number, so
 # normalize to the canonical project ID. If nothing is set, let the user pick.
