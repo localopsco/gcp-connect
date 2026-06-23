@@ -48,6 +48,12 @@ ensure_terraform() {
   [[ -n "$codename" ]] || err "Could not determine the OS codename to install Terraform. Install it manually (https://developer.hashicorp.com/terraform/install) and re-run."
 
   echo "==> Terraform not found; installing it from the HashiCorp apt repository"
+  # Cloud Shell pauses 5s with a warning before every apt-get; this opt-out file
+  # silences it so the install runs unattended.
+  if [[ "${CLOUD_SHELL:-}" == "true" ]]; then
+    mkdir -p "$HOME/.cloudshell" 2>/dev/null || true
+    touch "$HOME/.cloudshell/no-apt-get-warning" 2>/dev/null || true
+  fi
   curl -fsSL https://apt.releases.hashicorp.com/gpg \
     | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com ${codename} main" \
