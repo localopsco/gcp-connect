@@ -1,85 +1,81 @@
-# Connect Google Cloud to Ops
+# Google Cloud Workload Identity Federation
 
-This repository connects a Google Cloud project using **Workload Identity Federation**.
-We receive back a short-lived, on-demand credentials for your project — there
-are **no service account keys** to create, store, rotate, or leak.
+Terraform configuration that sets up [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation)
+in a Google Cloud project. It lets an external OIDC identity obtain short-lived,
+on-demand access to the project — **no service account keys** are created,
+stored, or exported.
 
-The code is open so you can review exactly what is created in your project, and
-which permissions are granted, before you run it.
+The code is open so you can review exactly what is created, and which
+permissions are granted, before you apply it.
 
 ## What it creates
 
-In the project you connect, this configuration creates:
+In the target project, this configuration creates:
 
-- A **service account** that Ops acts as when managing your project.
-- A **Workload Identity Pool** and **provider** that let Ops exchange its
-  sign-in for short-lived access — and that accept **only** the single identity
-  issued for your connection.
-- A **role** granted to that service account on the project (Owner by default,
-  configurable via `project_role`) so Ops can manage resources for you.
-- The **APIs** needed to establish the connection.
+- A **service account** that the federated identity impersonates.
+- A **Workload Identity Pool** and **provider** that trust a single OIDC
+  issuer, and accept **only** the one identity (subject) you specify.
+- A **project role** granted to that service account (`roles/owner` by default,
+  configurable via `project_role`).
+- The **APIs** required for federation and impersonation.
 
 No long-lived credentials are created or exported.
 
-## How to connect
+## Requirements
 
-The easiest way is from the Ops dashboard: create a Google Cloud connection
-and click **Open in Cloud Shell**.
+- [Terraform CLI](https://developer.hashicorp.com/terraform/install) >= 1.5
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)
+- Permission to manage IAM and Workload Identity in the target project.
 
-![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)
+## Usage
 
-This opens Google Cloud Shell with this repository ready and a guided
-walkthrough. You paste the setup command shown on your connection's page and run
-it:
-
-```bash
-export OPS_API_URL="..." \
-       OPS_CONNECTION_ID="..." \
-       OPS_VERIFICATION_TOKEN="..." && \
-./setup.sh
-```
-
-`setup.sh` reads your connection's details from Ops, applies the Terraform
-in this repository, and reports the result back so Ops can finish the
-connection. It is safe to re-run if anything is interrupted. Terraform state is
-kept in a bucket in your own project, so re-runs and teardown work from any
-Cloud Shell session.
-
-### Running Terraform directly
-
-If you prefer to drive Terraform yourself, you need the
-[Terraform CLI](https://developer.hashicorp.com/terraform/install) and the
-[Google Cloud CLI](https://cloud.google.com/sdk/docs/install), and permission to
-manage IAM and Workload Identity in the target project. Use the values shown for
-your connection in the Ops dashboard:
+State is stored in a GCS backend, configured at init time. Provide a bucket in
+the target project (and a prefix to isolate this state):
 
 ```bash
-terraform init
+terraform init \
+  -backend-config="bucket=YOUR_STATE_BUCKET" \
+  -backend-config="prefix=YOUR_STATE_PREFIX"
+
 terraform apply \
   -var "project_id=YOUR_PROJECT_ID" \
-  -var "connection_id=FROM_DASHBOARD" \
-  -var "oidc_client_id=FROM_DASHBOARD" \
-  -var "oidc_issuer_uri=FROM_DASHBOARD" \
-  -var "oidc_audience=FROM_DASHBOARD"
+  -var "connection_id=YOUR_IDENTIFIER" \
+  -var "oidc_client_id=SUBJECT_ALLOWED_TO_IMPERSONATE" \
+  -var "oidc_issuer_uri=https://YOUR_OIDC_ISSUER" \
+  -var "oidc_audience=YOUR_AUDIENCE"
 ```
 
-When it finishes, copy the `service_account_email` and
-`workload_identity_provider` outputs into Ops to complete the connection.
+See `terraform.tfvars.example` for a sample set of values.
 
-## Disconnecting
+## Inputs
 
-Run `destroy.sh` from Cloud Shell with the same connection values, **before**
-deleting the connection in the Ops dashboard:
+| Variable | Description | Default |
+| --- | --- | --- |
+| `project_id` | Google Cloud project to configure. | — |
+| `connection_id` | Identifier used to name the resources created here. | — |
+| `oidc_client_id` | The subject (`assertion.sub`) allowed to use the service account. | — |
+| `oidc_issuer_uri` | OIDC issuer URL the Workload Identity provider trusts. | — |
+| `oidc_audience` | Audience value the provider accepts on incoming tokens. | — |
+| `resource_suffix` | Suffix for resource names. Defaults to a value derived from `connection_id`. | `""` |
+| `provider_id` | Name of the Workload Identity provider created on the pool. | `ops-oidc` |
+| `project_role` | Role granted to the service account on the project. | `roles/owner` |
+| `service_account_display_name` | Display name for the service account. | `Ops` |
+
+## Outputs
+
+- `service_account_email` — the service account the federated identity impersonates.
+- `workload_identity_provider` — the full provider resource name used to obtain credentials.
+- `project_id` / `project_number` — the configured project.
+
+## Teardown
 
 ```bash
-export OPS_API_URL="..." \
-       OPS_CONNECTION_ID="..." \
-       OPS_VERIFICATION_TOKEN="..." && \
-./destroy.sh
+terraform destroy \
+  -var "project_id=YOUR_PROJECT_ID" \
+  -var "connection_id=YOUR_IDENTIFIER" \
+  -var "oidc_client_id=SUBJECT_ALLOWED_TO_IMPERSONATE" \
+  -var "oidc_issuer_uri=https://YOUR_OIDC_ISSUER" \
+  -var "oidc_audience=YOUR_AUDIENCE"
 ```
 
-This removes the service account, pool, and provider from your project. Then
-delete the connection in the Ops dashboard.
-
-To tear down with Terraform directly instead, run `terraform destroy` with the
-same variables you used for `apply`.
+This removes the service account, pool, and provider from the project.
