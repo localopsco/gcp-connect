@@ -9,7 +9,7 @@ terraform {
   }
 
   # State is stored in a GCS bucket in the customer project, configured at
-  # init time by bootstrap.sh (-backend-config bucket/prefix). Keyed on the
+  # init time by setup.sh (-backend-config bucket/prefix). Keyed on the
   # connection id so retries resume from existing state.
   backend "gcs" {}
 }

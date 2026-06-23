@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "The Google Cloud project to connect to LocalOps."
+  description = "The Google Cloud project to connect to Ops."
   type        = string
 
   validation {
@@ -9,7 +9,7 @@ variable "project_id" {
 }
 
 variable "connection_id" {
-  description = "Your LocalOps connection ID. Used to name the resources created in your project. Do not edit."
+  description = "Your Ops connection ID. Used to name the resources created in your project. Do not edit."
   type        = string
 
   validation {
@@ -19,7 +19,7 @@ variable "connection_id" {
 }
 
 variable "oidc_client_id" {
-  description = "Identifier issued by LocalOps for this connection. It is the only identity allowed to use the service account created below. Do not edit."
+  description = "Identifier issued by Ops for this connection. It is the only identity allowed to use the service account created below. Do not edit."
   type        = string
 
   validation {
@@ -29,7 +29,7 @@ variable "oidc_client_id" {
 }
 
 variable "oidc_issuer_uri" {
-  description = "LocalOps sign-in URL that the Workload Identity provider trusts. Do not edit."
+  description = "Ops sign-in URL that the Workload Identity provider trusts. Do not edit."
   type        = string
 
   validation {
@@ -39,7 +39,7 @@ variable "oidc_issuer_uri" {
 }
 
 variable "oidc_audience" {
-  description = "Audience value LocalOps tokens are issued with, accepted by the Workload Identity provider. Do not edit."
+  description = "Audience value Ops tokens are issued with, accepted by the Workload Identity provider. Do not edit."
   type        = string
 
   validation {
@@ -62,17 +62,17 @@ variable "resource_suffix" {
 variable "provider_id" {
   description = "Name of the Workload Identity provider created on the pool."
   type        = string
-  default     = "localops-oidc"
+  default     = "ops-oidc"
 }
 
 variable "project_role" {
-  description = "Role granted to the LocalOps service account on this project."
+  description = "Role granted to the Ops service account on this project."
   type        = string
   default     = "roles/owner"
 }
 
 variable "service_account_display_name" {
-  description = "Display name shown in the Google Cloud console for the LocalOps service account."
+  description = "Display name shown in the Google Cloud console for the Ops service account."
   type        = string
-  default     = "LocalOps"
+  default     = "Ops"
 }

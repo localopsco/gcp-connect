@@ -1,11 +1,11 @@
 output "service_account_email" {
-  description = "The service account LocalOps will use for this project."
-  value       = google_service_account.localops.email
+  description = "The service account Ops will use for this project."
+  value       = google_service_account.ops.email
 }
 
 output "workload_identity_provider" {
-  description = "The Workload Identity provider LocalOps uses to obtain short-lived credentials."
-  value       = "projects/${data.google_project.target.number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.localops.workload_identity_pool_id}/providers/${google_iam_workload_identity_pool_provider.localops.workload_identity_pool_provider_id}"
+  description = "The Workload Identity provider Ops uses to obtain short-lived credentials."
+  value       = "projects/${data.google_project.target.number}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.ops.workload_identity_pool_id}/providers/${google_iam_workload_identity_pool_provider.ops.workload_identity_pool_provider_id}"
 }
 
 output "project_id" {

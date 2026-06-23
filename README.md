@@ -1,8 +1,7 @@
-# Connect Google Cloud to LocalOps
+# Connect Google Cloud to Ops
 
-This repository connects a Google Cloud project to
-[LocalOps](https://localops.co) using **Workload Identity Federation**.
-LocalOps receives short-lived, on-demand credentials for your project — there
+This repository connects a Google Cloud project using **Workload Identity Federation**.
+We receive back a short-lived, on-demand credentials for your project — there
 are **no service account keys** to create, store, rotate, or leak.
 
 The code is open so you can review exactly what is created in your project, and
@@ -12,30 +11,47 @@ which permissions are granted, before you run it.
 
 In the project you connect, this configuration creates:
 
-- A **service account** that LocalOps acts as when managing your project.
-- A **Workload Identity Pool** and **provider** that let LocalOps exchange its
+- A **service account** that Ops acts as when managing your project.
+- A **Workload Identity Pool** and **provider** that let Ops exchange its
   sign-in for short-lived access — and that accept **only** the single identity
   issued for your connection.
+- A **role** granted to that service account on the project (Owner by default,
+  configurable via `project_role`) so Ops can manage resources for you.
 - The **APIs** needed to establish the connection.
-- A small set of **roles** on the service account so LocalOps can finish setting
-  up your project without this step requesting broad owner access.
 
 No long-lived credentials are created or exported.
 
-## How to run it
+## How to connect
 
-The easiest way is from the LocalOps dashboard: create a Google Cloud connection
-and click **Open in Cloud Shell**. This opens Google Cloud Shell with this
-repository ready and a guided walkthrough — you run a single command and return
-to LocalOps.
+The easiest way is from the Ops dashboard: create a Google Cloud connection
+and click **Open in Cloud Shell**.
 
-### Running manually
+![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)
 
-If you prefer to run it yourself, you need the [Terraform CLI](https://developer.hashicorp.com/terraform/install)
-and the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install), and
-permission to manage IAM and Workload Identity in the target project
-(`roles/owner` is sufficient). Use the values shown for your connection in the
-LocalOps dashboard:
+This opens Google Cloud Shell with this repository ready and a guided
+walkthrough. You paste the setup command shown on your connection's page and run
+it:
+
+```bash
+export OPS_API_URL="..." \
+       OPS_CONNECTION_ID="..." \
+       OPS_VERIFICATION_TOKEN="..." && \
+./setup.sh
+```
+
+`setup.sh` reads your connection's details from Ops, applies the Terraform
+in this repository, and reports the result back so Ops can finish the
+connection. It is safe to re-run if anything is interrupted. Terraform state is
+kept in a bucket in your own project, so re-runs and teardown work from any
+Cloud Shell session.
+
+### Running Terraform directly
+
+If you prefer to drive Terraform yourself, you need the
+[Terraform CLI](https://developer.hashicorp.com/terraform/install) and the
+[Google Cloud CLI](https://cloud.google.com/sdk/docs/install), and permission to
+manage IAM and Workload Identity in the target project. Use the values shown for
+your connection in the Ops dashboard:
 
 ```bash
 terraform init
@@ -48,11 +64,22 @@ terraform apply \
 ```
 
 When it finishes, copy the `service_account_email` and
-`workload_identity_provider` outputs into LocalOps to complete the connection.
+`workload_identity_provider` outputs into Ops to complete the connection.
 
 ## Disconnecting
 
-To disconnect, delete the LocalOps Workload Identity Pool in the Google Cloud
-console under **IAM & Admin → Workload Identity Federation**. This immediately
-stops LocalOps from obtaining new credentials. You can then delete the LocalOps
-service account, and remove the connection in the LocalOps dashboard.
+Run `destroy.sh` from Cloud Shell with the same connection values, **before**
+deleting the connection in the Ops dashboard:
+
+```bash
+export OPS_API_URL="..." \
+       OPS_CONNECTION_ID="..." \
+       OPS_VERIFICATION_TOKEN="..." && \
+./destroy.sh
+```
+
+This removes the service account, pool, and provider from your project. Then
+delete the connection in the Ops dashboard.
+
+To tear down with Terraform directly instead, run `terraform destroy` with the
+same variables you used for `apply`.

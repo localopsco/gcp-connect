@@ -1,9 +1,9 @@
-# Example values. During normal setup these are provided for you by LocalOps
-# and you do not need to create this file. It is here only if you choose to run
-# the setup manually.
+# Example values. During normal setup these are provided for you by Ops and you
+# do not need to create this file. It is here only if you choose to run the
+# setup manually.
 
 project_id      = "your-gcp-project-id"
-connection_id   = "your-localops-connection-id"
-oidc_client_id  = "issued-by-localops"
-oidc_issuer_uri = "https://app.localops.co"
-oidc_audience   = "localops"
+connection_id   = "your-connection-id"
+oidc_client_id  = "issued-for-your-connection"
+oidc_issuer_uri = "https://login.example.com"
+oidc_audience   = "ops-connect"
